@@ -8,12 +8,13 @@ type Game struct {
 
 // New erstellt ein neues Spiel mit dem gegebenen Titel.
 func New(title string, genre string) *Game {
-	// TODO
-	return nil
+	return &Game{
+		Title: title,
+		Genre: genre,
+	}
 }
 
 // HasGenre prüft, ob das Spiel ein bestimmtes Genre hat.
 func (g *Game) HasGenre(genre string) bool {
-	// TODO
-	return false
+	return g.Genre == genre
 }
