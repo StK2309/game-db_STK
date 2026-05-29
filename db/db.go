@@ -20,6 +20,10 @@ type GameDb struct {
 	// MinPlayersForRecommendation definiert die Mindestanzahl von Spielern,
 	// die ein Spiel gespielt haben müssen, damit es für Empfehlungen berücksichtigt wird.
 	MinPlayersForRecommendation int
+
+	// Neu: Indizes
+	gamesByGenre    map[string][]*game.Game
+	qualifiedByGame map[string]int // Titel → Anzahl qualifizierter Spieler
 }
 
 // New erstellt eine neue leere Datenbank.
