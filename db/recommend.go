@@ -2,7 +2,6 @@ package db
 
 import (
 	"game-db/game"
-	"game-db/player"
 )
 
 // RecommendGames erwartet einen Spielernamen und generiert Spiele-Empfehlungen.
@@ -11,64 +10,35 @@ import (
 // Für diese Spiele werden Spiele mit gleichem Genre gesucht,
 // die von anderen Spielern häufig gespielt wurden.
 func (db *GameDb) RecommendGames(playerName string) []*game.Game {
-	recommendedGames := []*game.Game{}
-
-	// Spieler finden
-	var player *player.Player
-	for _, p := range db.Players {
-		if p.Name == playerName {
-			player = p
-			break
-		}
-	}
-	if player == nil {
-		return recommendedGames
+	if !db.PlayerExists(playerName) {
+		return nil
 	}
 
-	// Oft gespielte Titel des Spielers
-	playedTitles := player.PlayedGames(db.MinHoursForRecommendation)
-	if len(playedTitles) == 0 {
-		return recommendedGames
+	// Schritt 1: Finde die Spiele, die der Spieler oft gespielt hat.
+	favoriteGames := db.GetFavoriteGames(playerName)
+
+	// Schritt 2: Sammle Genres der Lieblingsspiele.
+	genres := make(map[string]bool)
+	for _, game := range favoriteGames {
+		genres[game.Genre] = true
 	}
 
-	// Genres der gespielten Spiele sammeln
-	genres := map[string]bool{}
-	playerGames := map[string]bool{}
-	for _, title := range playedTitles {
-		playerGames[title] = true
-		for _, g := range db.Games {
-			if g.Title == title {
-				genres[g.Genre] = true
+	// Schritt 3: Suche nach Spielen in den gleichen Genres, die von anderen Spielern häufig gespielt wurden.
+	recommendedGames := make(map[string]*game.Game)
+	for genre := range genres {
+		popularGames := db.GetPopularGamesByGenre(genre)
+		for _, popularGame := range popularGames {
+			if !db.HasPlayerPlayedGame(playerName, popularGame.Title) {
+				recommendedGames[popularGame.Title] = popularGame
 			}
 		}
 	}
 
-	// Spiele anderer Spieler mit gleichem Genre zählen
-	candidateCount := map[string]int{}
-	for _, other := range db.Players {
-		if other.Name == playerName {
-			continue
-		}
-		for _, title := range other.PlayedGames(db.MinHoursForRecommendation) {
-			if !playerGames[title] {
-				candidateCount[title]++
-			}
-		}
+	// Schritt 4: Konvertiere die Map in eine Liste und gib sie zurück.
+	result := make([]*game.Game, 0, len(recommendedGames))
+	for _, game := range recommendedGames {
+		result = append(result, game)
 	}
 
-	// Nur Spiele empfehlen, die genug Spieler gespielt haben und passendes Genre haben
-	seen := map[string]bool{}
-	for title, count := range candidateCount {
-		if count < db.MinPlayersForRecommendation || seen[title] {
-			continue
-		}
-		for _, g := range db.Games {
-			if g.Title == title && genres[g.Genre] {
-				recommendedGames = append(recommendedGames, g)
-				seen[title] = true
-			}
-		}
-	}
-
-	return recommendedGames
+	return result
 }
